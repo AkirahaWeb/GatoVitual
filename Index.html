@@ -1,0 +1,1300 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Meu Gato Virtual Compartilhado</title>
+   <!-- Inclui o Tailwind CSS para estilização rápida e responsividade -->
+   <script src="https://cdn.tailwindcss.com"></script>
+   <style>
+       /* Define a fonte Inter para todo o corpo do documento */
+       body {
+           font-family: "Inter", sans-serif;
+           background-color: #f0f0f0; /* Cor de fundo suave */
+           display: flex;
+           justify-content: center;
+           align-items: center;
+           min-height: 100vh; /* Garante que o corpo ocupe a altura total da viewport */
+           margin: 0;
+           padding: 1rem; /* Adiciona um pouco de padding para telas menores */
+           box-sizing: border-box; /* Inclui padding e borda no tamanho total */
+       }
+       /* Estilo para o contêiner principal do jogo */
+       .game-container {
+           background-color: #ffffff;
+           border-radius: 1.5rem; /* Cantos arredondados */
+           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Sombra suave */
+           padding: 1.5rem;
+           width: 100%;
+           max-width: 400px; /* Largura máxima para celulares */
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           gap: 1.5rem; /* Espaçamento entre os elementos */
+       }
+       /* Estilo para a imagem do gato */
+       .cat-image {
+           width: 180px; /* Tamanho fixo para a imagem do gato */
+           height: 180px;
+           object-fit: contain; /* Garante que a imagem se ajuste sem cortar */
+           border-radius: 50%; /* Imagem circular */
+           border: 4px solid #fbd38d; /* Borda ao redor da imagem */
+           background-color: #ffe0b2; /* Fundo para a imagem */
+           transition: border-color 0.3s ease-in-out; /* Transição para feedback de drop */
+       }
+       /* Estilo para a borda de arrastar e soltar */
+       .cat-image.drag-over {
+           border-color: #3b82f6; /* Borda azul quando arrasta sobre */
+       }
+
+       /* Estilo para as barras de status */
+       .status-bar-container {
+           width: 100%;
+           display: flex;
+           flex-direction: column;
+           gap: 0.5rem;
+       }
+       .status-bar {
+           background-color: #e0e0e0;
+           border-radius: 0.75rem; /* Cantos arredondados */
+           height: 12px; /* Altura da barra */
+           overflow: hidden; /* Garante que o preenchimento não saia */
+       }
+       .status-fill {
+           height: 100%;
+           border-radius: 0.75rem; /* Cantos arredondados */
+           transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out; /* Transição suave */
+       }
+       /* Cores para as barras de status */
+       .bg-green-500 { background-color: #10b981; }
+       .bg-yellow-500 { background-color: #f59e0b; }
+       .bg-red-500 { background-color: #ef4444; }
+       .bg-blue-500 { background-color: #3b82f6; }
+
+       /* Estilo para os botões de ação */
+       .action-buttons {
+           display: grid;
+           grid-template-columns: repeat(2, 1fr); /* Duas colunas */
+           gap: 1rem; /* Espaçamento entre os botões */
+           width: 100%;
+       }
+       .action-button {
+           padding: 0.8rem 1.2rem;
+           border-radius: 0.75rem; /* Cantos arredondados */
+           font-weight: 600; /* Texto semi-negrito */
+           color: #ffffff;
+           cursor: pointer;
+           transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out; /* Transições suaves */
+           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra para os botões */
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           gap: 0.5rem;
+       }
+       .action-button:hover:not(:disabled) {
+           transform: translateY(-2px); /* Efeito de elevação ao passar o mouse, se não estiver desabilitado */
+       }
+       .action-button:active:not(:disabled) {
+           transform: translateY(0); /* Efeito de clique, se não estiver desabilitado */
+           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+       }
+       .action-button:disabled {
+           opacity: 0.6; /* Menor opacidade para botões desabilitados */
+           cursor: not-allowed; /* Cursor de "não permitido" */
+       }
+       /* Cores dos botões */
+       .btn-feed { background-color: #4CAF50; } /* Verde */
+       .btn-feed:hover { background-color: #45a049; }
+       .btn-play { background-color: #2196F3; } /* Azul */
+       .btn-play:hover { background-color: #1976D2; }
+       .btn-sleep { background-color: #FFC107; } /* Amarelo */
+       .btn-sleep:hover { background-color: #FFA000; }
+       .btn-bathe { background-color: #9C27B0; } /* Roxo */
+       .btn-bathe:hover { background-color: #7B1FA2; }
+       .btn-wardrobe { background-color: #60A5FA; } /* Azul claro para o guarda-roupa */
+       .btn-wardrobe:hover { background-color: #3B82F6; }
+       .btn-settings { background-color: #6B7280; } /* Cinza para configurações */
+       .btn-settings:hover { background-color: #4B5563; }
+       .btn-back { background-color: #EF4444; } /* Vermelho para voltar */
+       .btn-back:hover { background-color: #DC2626; }
+       .btn-reset { background-color: #DC2626; } /* Vermelho para resetar */
+       .btn-reset:hover { background-color: #B91C1C; }
+
+
+       /* Estilo para a mensagem de status */
+       .message-box {
+           background-color: #fff3cd; /* Fundo amarelo claro */
+           color: #856404; /* Texto amarelo escuro */
+           border: 1px solid #ffeeba; /* Borda amarela */
+           border-radius: 0.75rem;
+           padding: 0.8rem;
+           width: 100%;
+           text-align: center;
+           font-size: 0.9rem;
+           margin-top: 1rem;
+       }
+
+       /* Estilo para a mensagem de carregamento */
+       .loading-message {
+           font-size: 1.1rem;
+           color: #555;
+           margin-bottom: 1rem;
+       }
+
+       /* Estilo para o ID do usuário */
+       .user-id-display {
+           font-size: 0.8rem;
+           color: #777;
+           margin-top: 0.5rem;
+           word-break: break-all; /* Quebra a palavra se for muito longa */
+           text-align: center;
+       }
+
+       /* Estilos para o Guarda-Roupa */
+       .wardrobe-view {
+           display: none; /* Escondido por padrão */
+           flex-direction: column;
+           align-items: center;
+           gap: 1.5rem;
+           width: 100%;
+       }
+       .wardrobe-items {
+           display: grid;
+           grid-template-columns: repeat(3, 1fr); /* 3 colunas para as roupas */
+           gap: 1rem;
+           width: 100%;
+           padding: 1rem;
+           border: 1px dashed #ccc;
+           border-radius: 0.75rem;
+           background-color: #f9f9f9;
+       }
+       .clothing-item {
+           width: 80px;
+           height: 80px;
+           background-color: #e2e8f0; /* Cor de fundo para o placeholder da roupa */
+           border: 2px solid #cbd5e0;
+           border-radius: 0.5rem;
+           display: flex;
+           justify-content: center;
+           align-items: center;
+           font-size: 0.75rem;
+           font-weight: 600;
+           color: #4a5568;
+           cursor: grab;
+           user-select: none; /* Impede seleção de texto ao arrastar */
+           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+           transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+           touch-action: none; /* Previne o comportamento padrão de rolagem em dispositivos de toque */
+       }
+       .clothing-item:active {
+           cursor: grabbing;
+           transform: scale(1.05);
+           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+       }
+       .clothing-item.current-active {
+           border: 2px solid #3b82f6; /* Borda azul para a roupa atualmente selecionada */
+           background-color: #bfdbfe; /* Fundo azul claro */
+       }
+       .current-clothing-display {
+           font-size: 1rem;
+           font-weight: 600;
+           color: #4a5568;
+           margin-top: 0.5rem;
+           text-align: center;
+       }
+
+       /* Estilo para a visão principal do jogo */
+       #gameView {
+           display: flex; /* Garante que os elementos dentro se empilhem verticalmente */
+           flex-direction: column;
+           align-items: center;
+           gap: 1.5rem; /* Espaçamento consistente */
+           width: 100%; /* Garante que ocupe a largura total disponível */
+       }
+
+       /* Styles for dragging feedback */
+       .clothing-item.dragging {
+           position: absolute; /* Permite mover livremente */
+           z-index: 1000; /* Garante que esteja no topo */
+           opacity: 0.8;
+           box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+           pointer-events: none; /* Permite que os eventos de toque passem para os elementos abaixo */
+       }
+
+       /* Estilo para o campo de nome do gato */
+       .cat-name-input {
+           font-size: 1.5rem; /* Tamanho da fonte maior */
+           font-weight: bold;
+           text-align: center;
+           border: 2px solid #ccc;
+           border-radius: 0.5rem;
+           padding: 0.5rem 1rem;
+           margin-bottom: 1rem;
+           width: 80%; /* Ocupa boa parte da largura */
+           max-width: 300px;
+           outline: none; /* Remove o contorno padrão ao focar */
+           transition: border-color 0.2s ease-in-out;
+       }
+       .cat-name-input:focus {
+           border-color: #3b82f6; /* Borda azul ao focar */
+       }
+
+       /* Estilos para o Menu de Configurações */
+       .settings-view {
+           display: none; /* Escondido por padrão */
+           flex-direction: column;
+           align-items: center;
+           gap: 1rem;
+           width: 100%;
+       }
+       .settings-option {
+           width: 100%;
+           padding: 1rem;
+           border-radius: 0.75rem;
+           background-color: #f0f4f8; /* Fundo suave */
+           text-align: center;
+           font-weight: 600;
+           color: #333;
+           cursor: pointer;
+           transition: background-color 0.2s ease-in-out;
+           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+       }
+       .settings-option:hover {
+           background-color: #e2e8f0;
+       }
+
+       /* Estilos para o Modal de Confirmação/Nome do Gato */
+       .modal-overlay {
+           position: fixed;
+           top: 0;
+           left: 0;
+           width: 100%;
+           height: 100%;
+           background-color: rgba(0, 0, 0, 0.7); /* Fundo escuro semi-transparente */
+           display: flex;
+           justify-content: center;
+           align-items: center;
+           z-index: 2000; /* Garante que esteja acima de tudo */
+           display: none; /* Escondido por padrão */
+       }
+       .modal-content {
+           background-color: #ffffff;
+           padding: 2rem;
+           border-radius: 1rem;
+           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+           text-align: center;
+           max-width: 350px;
+           width: 90%;
+           display: flex;
+           flex-direction: column;
+           gap: 1rem;
+       }
+       .modal-content h3 {
+           font-size: 1.5rem;
+           font-weight: bold;
+           color: #333;
+       }
+       .modal-content p {
+           font-size: 1rem;
+           color: #555;
+           margin-bottom: 1rem;
+       }
+       .modal-buttons {
+           display: flex;
+           justify-content: center;
+           gap: 1rem;
+           margin-top: 1rem;
+       }
+       .modal-button {
+           padding: 0.7rem 1.5rem;
+           border-radius: 0.5rem;
+           font-weight: 600;
+           cursor: pointer;
+           transition: background-color 0.2s ease-in-out;
+       }
+       .modal-button.confirm {
+           background-color: #3b82f6;
+           color: #ffffff;
+       }
+       .modal-button.confirm:hover {
+           background-color: #2563eb;
+       }
+       .modal-button.cancel {
+           background-color: #e0e0e0;
+           color: #333;
+       }
+       .modal-button.cancel:hover {
+           background-color: #c0c0c0;
+       }
+       .modal-input {
+           width: 100%;
+           padding: 0.7rem;
+           border: 1px solid #ccc;
+           border-radius: 0.5rem;
+           font-size: 1rem;
+       }
+
+       /* Responsividade para telas menores que 400px de largura */
+       @media (max-width: 400px) {
+           .game-container {
+               padding: 1rem;
+               gap: 1rem;
+           }
+           .cat-image {
+               width: 150px;
+               height: 150px;
+           }
+           .action-buttons {
+               grid-template-columns: 1fr; /* Uma coluna em telas muito pequenas */
+           }
+           .action-button {
+               padding: 0.7rem 1rem;
+           }
+           .message-box {
+               font-size: 0.85rem;
+           }
+           .loading-message {
+               font-size: 1rem;
+           }
+           .user-id-display {
+               font-size: 0.75rem;
+           }
+           .wardrobe-items {
+               grid-template-columns: repeat(2, 1fr); /* 2 colunas em telas menores */
+           }
+           .clothing-item {
+               width: 70px;
+               height: 70px;
+           }
+           .cat-name-input {
+               font-size: 1.2rem;
+               padding: 0.4rem 0.8rem;
+           }
+           .modal-content {
+               padding: 1.5rem;
+           }
+           .modal-content h3 {
+               font-size: 1.3rem;
+           }
+           .modal-content p {
+               font-size: 0.9rem;
+           }
+       }
+   </style>
+</head>
+<body>
+   <div class="game-container">
+       <!-- Input para o nome do gato (sempre visível na tela principal do jogo) -->
+       <input type="text" id="catNameInput" class="cat-name-input" placeholder="Nome do Gato" maxlength="20">
+
+       <!-- Mensagem de Carregamento -->
+       <div id="loadingMessage" class="loading-message">Carregando gato...</div>
+
+       <!-- Visão Principal do Jogo -->
+       <div id="gameView">
+           <!-- Imagem do Gato - Será atualizada dinamicamente com base no estado -->
+           <img id="catImage" src="https://placehold.co/180x180/ADD8E6/000000?text=Gato+Feliz" alt="Gato Virtual" class="cat-image">
+
+           <!-- Área de Status do Gato -->
+           <div class="status-bar-container">
+               <div class="flex justify-between items-center text-sm text-gray-700">
+                   <span>Fome:</span>
+                   <span id="hungerValue">100%</span>
+               </div>
+               <div class="status-bar">
+                   <div id="hungerBar" class="status-fill bg-green-500" style="width: 100%;"></div>
+               </div>
+
+               <div class="flex justify-between items-center text-sm text-gray-700 mt-2">
+                   <span>Energia:</span>
+                   <span id="energyValue">100%</span>
+               </div>
+               <div class="status-bar">
+                   <div id="energyBar" class="status-fill bg-green-500" style="width: 100%;"></div>
+               </div>
+
+               <div class="flex justify-between items-center text-sm text-gray-700 mt-2">
+                   <span>Felicidade:</span>
+                   <span id="happinessValue">100%</span>
+               </div>
+               <div class="status-bar">
+                   <div id="happinessBar" class="status-fill bg-green-500" style="width: 100%;"></div>
+               </div>
+
+               <div class="flex justify-between items-center text-sm text-gray-700 mt-2">
+                   <span>Higiene:</span>
+                   <span id="hygieneValue">100%</span>
+               </div>
+               <div class="status-bar">
+                   <div id="hygieneBar" class="status-fill bg-green-500" style="width: 100%;"></div>
+               </div>
+           </div>
+
+           <!-- Botões de Ação -->
+           <div class="action-buttons">
+               <button id="feedBtn" class="action-button btn-feed">
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                       <path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM8.707 6.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 6.293z" clip-rule="evenodd" />
+                   </svg>
+                   Alimentar
+               </button>
+               <button id="playBtn" class="action-button btn-play">
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                       <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17.555 17.08a1 1 0 00-.416-.923l-3.23-2.33a1 1 0 00-1.276.079l-2.737 2.738A1 1 0 0010 16v-1a1 1 0 112 0v.586l2.543-2.543a1 1 0 00.183-1.07l-1.557-2.796a1 1 0 111.789-.886l1.557 2.796a2 2 0 01-.366 2.144zM10 14a1 1 0 00-1-1H7a1 1 0 100 2h2a1 1 0 001-1z" />
+                   </svg>
+                   Brincar
+               </button>
+               <button id="sleepBtn" class="action-button btn-sleep">
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                       <path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM8.707 6.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 6.293z" clip-rule="evenodd" />
+                   </svg>
+                   Dormir
+               </button>
+               <button id="batheBtn" class="action-button btn-bathe">
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                       <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm3.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" clip-rule="evenodd" />
+                   </svg>
+                   Banho
+               </button>
+           </div>
+           <!-- Botões de Navegação -->
+           <div class="action-buttons mt-4">
+               <button id="wardrobeBtn" class="action-button btn-wardrobe">
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                       <path d="M10 2a2 2 0 00-2 2v1h4V4a2 2 0 00-2-2zm-3 8v4a2 2 0 002 2h2a2 2 0 002-2v-4H7zM4 7h12a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
+                   </svg>
+                   Guarda-Roupa
+               </button>
+               <button id="settingsBtn" class="action-button btn-settings">
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                       <path fill-rule="evenodd" d="M11.49 3.17c-.325-1.09-.93-2.174-1.78-3.07a3.03 3.03 0 00-3.465 0 3.03 3.03 0 00-1.78 3.07c-.246.841-.125 1.77.36 2.572.58.91 1.544 1.62 2.656 1.878.843.19 1.63.22 2.414.128a6.068 6.068 0 002.54-1.226 4.002 4.002 0 00.36-2.572zM15.464 16.96c.325 1.09.93 2.174 1.78 3.07a3.03 3.03 0 003.465 0 3.03 3.03 0 001.78-3.07c.246-.841.125-1.77-.36-2.572-.58-.91-1.544-1.62-2.656-1.878-.843-.19-1.63-.22-2.414-.128a6.068 6.068 0 00-2.54 1.226 4.002 4.002 0 00-.36 2.572zM4.536 16.96c-.325 1.09-.93 2.174-1.78 3.07a3.03 3.03 0 01-3.465 0 3.03 3.03 0 01-1.78-3.07c-.246-.841-.125-1.77.36-2.572.58-.91 1.544-1.62 2.656-1.878.843-.19 1.63-.22 2.414-.128a6.068 6.068 0 012.54 1.226 4.002 4.002 0 01-.36 2.572z" clip-rule="evenodd" />
+                   </svg>
+                   Configurações
+               </button>
+           </div>
+       </div>
+
+       <!-- Visão do Guarda-Roupa -->
+       <div id="wardrobeView" class="wardrobe-view">
+           <h2 class="text-2xl font-bold text-gray-800 mb-4">Guarda-Roupa do Gato</h2>
+           <!-- Imagem do Gato para o Guarda-Roupa (área de drop) -->
+           <img id="wardrobeCatImage" src="https://placehold.co/180x180/ADD8E6/000000?text=Gato+Base" alt="Gato para vestir" class="cat-image">
+           <div id="currentClothingDisplay" class="current-clothing-display">Nenhuma roupa selecionada</div>
+
+           <h3 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Arraste uma roupa para o gato:</h3>
+           <div class="wardrobe-items">
+               <!-- Itens de Roupa (placeholders arrastáveis) -->
+               <div id="hat-red" class="clothing-item">Boné Vermelho</div>
+               <div id="scarf-blue" class="clothing-item">Cachecol Azul</div>
+               <div id="glasses-cool" class="clothing-item">Óculos Estilosos</div>
+               <div id="shirt-striped" class="clothing-item">Camisa Listrada</div>
+               <div id="bowtie-green" class="clothing-item">Gravata Borboleta Verde</div>
+               <div id="collar-bell" class="clothing-item">Coleira com Sino</div>
+               <div id="no-clothing" class="clothing-item" style="background-color: #fca5a5; color: #dc2626;">Remover Roupa</div>
+           </div>
+
+           <!-- Botão para voltar ao jogo principal -->
+           <button id="backToGameFromWardrobeBtn" class="action-button btn-back mt-4 w-full">
+               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                   <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+               </svg>
+               Voltar ao Jogo
+           </button>
+       </div>
+
+       <!-- Visão de Configurações -->
+       <div id="settingsView" class="settings-view">
+           <h2 class="text-2xl font-bold text-gray-800 mb-4">Configurações</h2>
+           <div class="settings-option btn-reset" id="resetCatBtn">
+               Resetar Gato
+           </div>
+           <!-- Botão para voltar ao jogo principal -->
+           <button id="backToGameFromSettingsBtn" class="action-button btn-back mt-4 w-full">
+               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                   <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+               </svg>
+               Voltar ao Jogo
+           </button>
+       </div>
+
+       <!-- Caixa de Mensagem -->
+       <div id="messageBox" class="message-box hidden"></div>
+
+       <!-- Exibição do ID do Usuário -->
+       <div id="userIdDisplay" class="user-id-display mt-4"></div>
+   </div>
+
+   <!-- Modal para Nome do Gato -->
+   <div id="nameInputModal" class="modal-overlay">
+       <div class="modal-content">
+           <h3>Bem-vindo!</h3>
+           <p>Qual será o nome do seu novo gato?</p>
+           <input type="text" id="modalCatNameInput" class="modal-input" placeholder="Nome do Gato" maxlength="20">
+           <div class="modal-buttons">
+               <button id="saveCatNameBtn" class="modal-button confirm">Salvar Nome</button>
+           </div>
+       </div>
+   </div>
+
+   <!-- Modal de Confirmação Genérico -->
+   <div id="confirmationModal" class="modal-overlay">
+       <div class="modal-content">
+           <h3 id="confirmationModalTitle">Confirmar Ação</h3>
+           <p id="confirmationModalMessage">Você tem certeza?</p>
+           <div class="modal-buttons">
+               <button id="confirmYesBtn" class="modal-button confirm">Sim</button>
+               <button id="confirmNoBtn" class="modal-button cancel">Não</button>
+           </div>
+       </div>
+   </div>
+
+   <!-- Firebase SDKs -->
+   <script type="module">
+       // Importa as funções necessárias do Firebase
+       import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+       import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+       import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+       // Variáveis globais para as instâncias do Firebase
+       let app;
+       let db;
+       let auth;
+       let userId; // Armazenará o ID do usuário atual
+       let isAuthReady = false; // Flag para garantir que as operações do Firestore ocorram após a autenticação
+       let initialDataLoaded = false; // Flag para controlar o carregamento inicial dos dados
+
+       // Objeto que representa o estado do gato (será sincronizado com o Firestore)
+       const cat = {
+           name: "",       // Nova propriedade para o nome do gato (vazio por padrão)
+           hunger: 100,    // Fome (0 = faminto, 100 = satisfeito)
+           energy: 100,    // Energia (0 = exausto, 100 = cheio de energia)
+           happiness: 100, // Felicidade (0 = triste, 100 = feliz)
+           hygiene: 100,   // Higiene (0 = sujo, 100 = limpo)
+           lastActivityTime: Date.now(), // Última vez que o estado do gato foi atualizado (timestamp)
+           isAlive: true,  // Indica se o gato está vivo ou não
+           currentClothing: null // Nova propriedade para armazenar a roupa atual (ID da roupa)
+       };
+
+       // Mapeamento de IDs de roupas para seus nomes amigáveis
+       const clothingNames = {
+           'hat-red': 'Boné Vermelho',
+           'scarf-blue': 'Cachecol Azul',
+           'glasses-cool': 'Óculos Estilosos',
+           'shirt-striped': 'Camisa Listrada',
+           'bowtie-green': 'Gravata Borboleta Verde',
+           'collar-bell': 'Coleira com Sino',
+           'no-clothing': 'Nenhuma Roupa'
+       };
+
+       // Referências aos elementos HTML
+       const catNameInput = document.getElementById('catNameInput'); // Campo de input para o nome do gato na tela principal
+       const gameView = document.getElementById('gameView');
+       const wardrobeView = document.getElementById('wardrobeView');
+       const settingsView = document.getElementById('settingsView'); // Nova visão de configurações
+
+       const catImage = document.getElementById('catImage'); // Imagem do gato na visão principal
+       const wardrobeCatImage = document.getElementById('wardrobeCatImage'); // Imagem do gato na visão do guarda-roupa
+       const currentClothingDisplay = document.getElementById('currentClothingDisplay'); // Exibe a roupa atual no guarda-roupa
+
+       const hungerBar = document.getElementById('hungerBar');
+       const energyBar = document.getElementById('energyBar');
+       const happinessBar = document.getElementById('happinessBar');
+       const hygieneBar = document.getElementById('hygieneBar');
+
+       const hungerValue = document.getElementById('hungerValue');
+       const energyValue = document.getElementById('energyValue');
+       const happinessValue = document.getElementById('happinessValue');
+       const hygieneValue = document.getElementById('hygieneValue');
+
+       const feedBtn = document.getElementById('feedBtn');
+       const playBtn = document.getElementById('playBtn');
+       const sleepBtn = document.getElementById('sleepBtn');
+       const batheBtn = document.getElementById('batheBtn');
+       const wardrobeBtn = document.getElementById('wardrobeBtn'); // Botão para abrir o guarda-roupa
+       const settingsBtn = document.getElementById('settingsBtn'); // Novo botão para abrir configurações
+       const backToGameFromWardrobeBtn = document.getElementById('backToGameFromWardrobeBtn'); // Botão para voltar do guarda-roupa
+       const backToGameFromSettingsBtn = document.getElementById('backToGameFromSettingsBtn'); // Botão para voltar das configurações
+       const resetCatBtn = document.getElementById('resetCatBtn'); // Botão para resetar o gato
+
+       const messageBox = document.getElementById('messageBox');
+       const loadingMessage = document.getElementById('loadingMessage');
+       const userIdDisplay = document.getElementById('userIdDisplay');
+
+       // Referências aos elementos do modal de nome
+       const nameInputModal = document.getElementById('nameInputModal');
+       const modalCatNameInput = document.getElementById('modalCatNameInput');
+       const saveCatNameBtn = document.getElementById('saveCatNameBtn');
+
+       // Referências aos elementos do modal de confirmação
+       const confirmationModal = document.getElementById('confirmationModal');
+       const confirmationModalTitle = document.getElementById('confirmationModalTitle');
+       const confirmationModalMessage = document.getElementById('confirmationModalMessage');
+       const confirmYesBtn = document.getElementById('confirmYesBtn');
+       const confirmNoBtn = document.getElementById('confirmNoBtn');
+
+       // Constantes para as taxas de degradação
+       // Taxas de degradação OFFLINE (por hora) - para que precise entrar 1 vez ao dia
+       const OFFLINE_DECAY_PER_HOUR_HUNGER = 2; // 2% por hora
+       const OFFLINE_DECAY_PER_HOUR_ENERGY = 3; // 3% por hora
+       const OFFLINE_DECAY_PER_HOUR_HAPPINESS = 1; // 1% por hora
+       const OFFLINE_DECAY_PER_HOUR_HYGIENE = 1.5; // 1.5% por hora
+
+       // Taxas de degradação ONLINE (por intervalo de 2 segundos) - mais lento para jogar
+       const ONLINE_DECAY_HUNGER = 0.2;
+       const ONLINE_DECAY_ENERGY = 0.3;
+       const ONLINE_DECAY_HAPPINESS = 0.1;
+       const ONLINE_DECAY_HYGIENE = 0.15;
+
+       // Limite de tempo para a morte do gato (em horas)
+       const DEATH_THRESHOLD_HOURS = 48; // 2 dias
+
+       // Variáveis para o sistema de arrastar e soltar (touch)
+       let activeClothingItem = null; // Armazena o elemento de roupa que está sendo arrastado
+       let initialX, initialY; // Coordenadas iniciais do toque
+       let xOffset = 0, yOffset = 0; // Deslocamento para posicionar o item arrastado
+
+       // Função para alternar entre as diferentes visões do jogo
+       function showView(view) {
+           gameView.style.display = 'none';
+           wardrobeView.style.display = 'none';
+           settingsView.style.display = 'none';
+           catNameInput.style.display = 'none'; // Esconde o input do nome por padrão em todas as views
+
+           if (view === 'game') {
+               gameView.style.display = 'flex';
+               catNameInput.style.display = 'block'; // Mostra o input do nome na tela do jogo
+               catNameInput.value = cat.name; // Atualiza o nome no input
+           } else if (view === 'wardrobe') {
+               wardrobeView.style.display = 'flex';
+               updateWardrobeUI(); // Atualiza a UI do guarda-roupa ao abrir
+           } else if (view === 'settings') {
+               settingsView.style.display = 'flex';
+           }
+       }
+
+       // Função para exibir o modal de confirmação
+       function showConfirmationModal(title, message, onConfirmCallback) {
+           confirmationModalTitle.textContent = title;
+           confirmationModalMessage.textContent = message;
+           confirmationModal.style.display = 'flex'; // Mostra o modal
+
+           // Remove listeners anteriores para evitar múltiplos disparos
+           confirmYesBtn.onclick = null;
+           confirmNoBtn.onclick = null;
+
+           confirmYesBtn.onclick = () => {
+               confirmationModal.style.display = 'none'; // Esconde o modal
+               onConfirmCallback(true); // Chama o callback com true (confirmado)
+           };
+           confirmNoBtn.onclick = () => {
+               confirmationModal.style.display = 'none'; // Esconde o modal
+               onConfirmCallback(false); // Chama o callback com false (cancelado)
+           };
+       }
+
+       // Função para exibir o modal de input de nome
+       function showNameInputModal() {
+           nameInputModal.style.display = 'flex';
+           modalCatNameInput.value = cat.name || ''; // Preenche com o nome atual ou vazio
+           modalCatNameInput.focus(); // Foca no campo de input
+       }
+
+       // Função para atualizar a interface do usuário (barras de status e imagem do gato)
+       function updateUI() {
+           // Garante que os valores estejam entre 0 e 100, a menos que o gato esteja morto
+           if (cat.isAlive) {
+               cat.hunger = Math.max(0, Math.min(100, cat.hunger));
+               cat.energy = Math.max(0, Math.min(100, cat.energy));
+               cat.happiness = Math.max(0, Math.min(100, cat.happiness));
+               cat.hygiene = Math.max(0, Math.min(100, cat.hygiene));
+           } else {
+               // Se o gato estiver morto, todos os status vão para 0
+               cat.hunger = 0;
+               cat.energy = 0;
+               cat.happiness = 0;
+               cat.hygiene = 0;
+           }
+
+           // Atualiza o valor do input do nome do gato na tela principal
+           catNameInput.value = cat.name;
+
+           // Atualiza a largura das barras de status
+           hungerBar.style.width = `${cat.hunger}%`;
+           energyBar.style.width = `${cat.energy}%`;
+           happinessBar.style.width = `${cat.happiness}%`;
+           hygieneBar.style.width = `${cat.hygiene}%`;
+
+           // Atualiza os valores percentuais exibidos
+           hungerValue.textContent = `${Math.round(cat.hunger)}%`;
+           energyValue.textContent = `${Math.round(cat.energy)}%`;
+           happinessValue.textContent = `${Math.round(cat.happiness)}%`;
+           hygieneValue.textContent = `${Math.round(cat.hygiene)}%`;
+
+           // Atualiza a cor das barras com base no nível do status
+           function updateBarColor(barElement, value) {
+               if (value > 70) {
+                   barElement.className = 'status-fill bg-green-500';
+               } else if (value > 30) {
+                   barElement.className = 'status-fill bg-yellow-500';
+               } else {
+                   barElement.className = 'status-fill bg-red-500';
+               }
+           }
+           updateBarColor(hungerBar, cat.hunger);
+           updateBarColor(energyBar, cat.energy);
+           updateBarColor(happinessBar, cat.happiness);
+           updateBarColor(hygieneBar, cat.hygiene);
+
+           // Atualiza a imagem do gato e habilita/desabilita botões com base no seu estado
+           let baseImageUrl;
+           let altText;
+           let currentClothingName = clothingNames[cat.currentClothing] || 'Nenhuma Roupa';
+
+           if (!cat.isAlive) {
+               baseImageUrl = "https://placehold.co/180x180/000000/FFFFFF?text=Gato+Morto"; // Imagem de gato morto
+               altText = `Gato Morto (${currentClothingName})`;
+               showMessage("Oh não! O gato não resistiu à negligência. Ele se foi...", 5000);
+               // Desabilita todos os botões de ação se o gato estiver morto
+               feedBtn.disabled = true;
+               playBtn.disabled = true;
+               sleepBtn.disabled = true;
+               batheBtn.disabled = true;
+               wardrobeBtn.disabled = true; // Desabilita o botão do guarda-roupa também
+               settingsBtn.disabled = true; // Desabilita o botão de configurações
+               catNameInput.disabled = true; // Desabilita o input do nome
+               clearInterval(gameInterval); // Para o loop do jogo
+           } else {
+               // Habilita os botões se o gato estiver vivo
+               feedBtn.disabled = false;
+               playBtn.disabled = false;
+               sleepBtn.disabled = false;
+               batheBtn.disabled = false;
+               wardrobeBtn.disabled = false;
+               settingsBtn.disabled = false;
+               catNameInput.disabled = false; // Habilita o input do nome
+
+               // Lógica para mudar a imagem do gato com base nos status
+               baseImageUrl = "https://placehold.co/180x180/ADD8E6/000000?text=Gato+Feliz"; // Gato feliz (padrão)
+               altText = `Gato Feliz (${currentClothingName})`;
+
+               if (cat.hunger < 30) {
+                   baseImageUrl = "https://placehold.co/180x180/FFA07A/000000?text=Gato+Fome"; // Laranja claro para fome
+                   altText = `Gato com Fome (${currentClothingName})`;
+               } else if (cat.energy < 30) {
+                   baseImageUrl = "https://placehold.co/180x180/C0C0C0/000000?text=Gato+Cansado"; // Cinza para cansaço
+                   altText = `Gato Cansado (${currentClothingName})`;
+               } else if (cat.happiness < 30) {
+                   baseImageUrl = "https://placehold.co/180x180/FF6347/000000?text=Gato+Triste"; // Vermelho tomate para tristeza
+                   altText = `Gato Triste (${currentClothingName})`;
+               } else if (cat.hygiene < 30) {
+                   baseImageUrl = "https://placehold.co/180x180/8B4513/FFFFFF?text=Gato+Sujo"; // Marrom para sujeira
+                   altText = `Gato Sujo (${currentClothingName})`;
+               }
+               // Prioriza estados críticos sobre o estado feliz
+               if (cat.hunger < 30 || cat.energy < 30 || cat.happiness < 30 || cat.hygiene < 30) {
+                   // Se qualquer um dos estados estiver crítico, a imagem já foi definida
+               } else {
+                   baseImageUrl = "https://placehold.co/180x180/ADD8E6/000000?text=Gato+Feliz"; // Volta para feliz se tudo estiver bem
+                   altText = `Gato Feliz (${currentClothingName})`;
+               }
+           }
+
+           // Atualiza a imagem do gato na visão principal do jogo
+           catImage.src = baseImageUrl;
+           catImage.alt = altText;
+
+           // Atualiza a imagem do gato na visão do guarda-roupa
+           wardrobeCatImage.src = baseImageUrl;
+           wardrobeCatImage.alt = altText;
+
+           // Atualiza o texto da roupa atual no guarda-roupa
+           currentClothingDisplay.textContent = `Gato usando: ${currentClothingName}`;
+
+           // Remove a classe 'current-active' de todas as roupas
+           document.querySelectorAll('.clothing-item').forEach(item => {
+               item.classList.remove('current-active');
+           });
+           // Adiciona a classe 'current-active' à roupa atualmente selecionada
+           if (cat.currentClothing) {
+               const activeClothingItemElement = document.getElementById(cat.currentClothing);
+               if (activeClothingItemElement) {
+                   activeClothingItemElement.classList.add('current-active');
+               }
+           }
+       }
+
+       // Função para atualizar a UI do guarda-roupa (apenas o texto da roupa atual)
+       function updateWardrobeUI() {
+           const currentClothingName = clothingNames[cat.currentClothing] || 'Nenhuma Roupa';
+           currentClothingDisplay.textContent = `Gato usando: ${currentClothingName}`;
+
+           // Remove a classe 'current-active' de todas as roupas
+           document.querySelectorAll('.clothing-item').forEach(item => {
+               item.classList.remove('current-active');
+           });
+           // Adiciona a classe 'current-active' à roupa atualmente selecionada
+           if (cat.currentClothing) {
+               const activeClothingItemElement = document.getElementById(cat.currentClothing);
+               if (activeClothingItemElement) {
+                   activeClothingItemElement.classList.add('current-active');
+               }
+           }
+       }
+
+
+       // Função para exibir mensagens temporárias
+       function showMessage(message, duration = 2000) {
+           messageBox.textContent = message;
+           messageBox.classList.remove('hidden');
+           setTimeout(() => {
+               messageBox.classList.add('hidden');
+           }, duration);
+       }
+
+       // Função para salvar o estado atual do gato no Firestore
+       async function saveCatStateToFirestore() {
+           // Verifica se o Firestore está inicializado e o usuário autenticado
+           if (!db || !isAuthReady) {
+               console.error("Firestore não inicializado ou usuário não autenticado.");
+               return;
+           }
+           try {
+               // Obtém o ID do aplicativo, que é usado para isolar os dados
+               const appId = firebaseConfig.appId; // Usa o appId da sua configuração Firebase
+               // Define a referência do documento do gato compartilhado no Firestore
+               // Usamos 'ourSharedCat' como ID do documento para que você e sua namorada compartilhem o mesmo gato.
+               // O caminho é /artifacts/{appId}/public/data/cats/ourSharedCat
+               const catRef = doc(db, `artifacts/${appId}/public/data/cats/ourSharedCat`);
+
+               // Atualiza o lastActivityTime antes de salvar
+               cat.lastActivityTime = Date.now();
+
+               // Salva o objeto 'cat' no Firestore. 'merge: true' garante que apenas os campos fornecidos sejam atualizados,
+               // sem sobrescrever o documento inteiro se ele já existir.
+               await setDoc(catRef, cat, { merge: true });
+               console.log("Estado do gato salvo no Firestore.");
+           } catch (e) {
+               console.error("Erro ao salvar o estado do gato: ", e);
+               showMessage("Erro ao salvar o estado do gato. Tente novamente.");
+           }
+       }
+
+       // Funções de Ação - agora também salvam no Firestore
+       function feedCat() {
+           if (!cat.isAlive) { showMessage("O gato não pode mais ser alimentado."); return; }
+           if (cat.hunger < 100) {
+               cat.hunger += 30; // Aumenta a fome
+               cat.hygiene -= 10; // Suja um pouco ao comer
+               cat.happiness += 5; // Fica um pouco mais feliz
+               showMessage("Você alimentou o gato! Ele está mais satisfeito.");
+               saveCatStateToFirestore(); // Salva as mudanças no Firestore
+           } else {
+               showMessage("O gato não está com fome agora.");
+           }
+           updateUI();
+       }
+
+       function playCat() {
+           if (!cat.isAlive) { showMessage("O gato não pode mais brincar."); return; }
+           if (cat.energy > 20) { // Só pode brincar se tiver energia
+               cat.happiness += 25; // Aumenta a felicidade
+               cat.energy -= 20;    // Gasta energia
+               cat.hygiene -= 15;   // Suja ao brincar
+               cat.hunger -= 10;    // Dá um pouco de fome
+               showMessage("Você brincou com o gato! Ele se divertiu muito.");
+               saveCatStateToFirestore(); // Salva as mudanças no Firestore
+           } else {
+               showMessage("O gato está muito cansado para brincar.");
+           }
+           updateUI();
+       }
+
+       function sleepCat() {
+           if (!cat.isAlive) { showMessage("O gato não pode mais dormir."); return; }
+           if (cat.energy < 100) {
+               cat.energy += 40;    // Recupera energia
+               cat.hunger -= 15;    // Dá um pouco de fome
+               cat.happiness += 5; // Fica um pouco mais feliz
+               showMessage("O gato tirou uma soneca e está mais energizado.");
+               saveCatStateToFirestore(); // Salva as mudanças no Firestore
+           } else {
+               showMessage("O gato não está com sono agora.");
+           }
+           updateUI();
+       }
+
+       function batheCat() {
+           if (!cat.isAlive) { showMessage("O gato não pode mais tomar banho."); return; }
+           if (cat.hygiene < 100) {
+               cat.hygiene += 50;   // Aumenta a higiene
+               cat.happiness -= 10; // Gatos geralmente não gostam de banho
+               cat.energy -= 5;     // Gasta um pouco de energia
+               showMessage("Você deu banho no gato. Ele está limpo, mas não muito feliz.");
+               saveCatStateToFirestore(); // Salva as mudanças no Firestore
+           } else {
+               showMessage("O gato já está limpo!");
+           }
+           updateUI();
+       }
+
+       // Adiciona os event listeners aos botões de ação
+       feedBtn.addEventListener('click', feedCat);
+       playBtn.addEventListener('click', playCat);
+       sleepBtn.addEventListener('click', sleepCat);
+       batheBtn.addEventListener('click', batheCat);
+
+       // Adiciona event listeners para os botões de navegação
+       wardrobeBtn.addEventListener('click', () => showView('wardrobe'));
+       settingsBtn.addEventListener('click', () => showView('settings')); // Novo listener para o botão de configurações
+       backToGameFromWardrobeBtn.addEventListener('click', () => showView('game'));
+       backToGameFromSettingsBtn.addEventListener('click', () => showView('game'));
+
+       // Event listener para o campo de nome do gato na tela principal
+       catNameInput.addEventListener('blur', () => {
+           const newName = catNameInput.value.trim();
+           if (newName && newName !== cat.name) {
+               cat.name = newName;
+               saveCatStateToFirestore();
+               showMessage(`O nome do gato foi alterado para ${cat.name}!`);
+           } else if (!newName && cat.name !== "") { // Se o campo estiver vazio, limpa o nome
+               cat.name = "";
+               saveCatStateToFirestore();
+               showMessage(`O nome do gato foi removido.`);
+           }
+           updateUI(); // Atualiza a UI para refletir o nome
+       });
+
+       // Event listener para o botão de salvar nome no modal
+       saveCatNameBtn.addEventListener('click', () => {
+           const newName = modalCatNameInput.value.trim();
+           if (newName) {
+               cat.name = newName;
+               saveCatStateToFirestore();
+               nameInputModal.style.display = 'none'; // Esconde o modal
+               showView('game'); // Mostra a tela principal do jogo
+               showMessage(`Bem-vindo, ${cat.name}!`);
+           } else {
+               showMessage("Por favor, digite um nome para o seu gato.");
+           }
+       });
+
+       // Event listener para o botão de resetar gato
+       resetCatBtn.addEventListener('click', () => {
+           showConfirmationModal("Resetar Gato", "Tem certeza que deseja resetar o gato? Todos os status e o nome serão perdidos.", (confirmed) => {
+               if (confirmed) {
+                   // Reseta o objeto cat para os valores iniciais
+                   Object.assign(cat, {
+                       name: "", // Nome vazio para pedir novamente na próxima entrada
+                       hunger: 100,
+                       energy: 100,
+                       happiness: 100,
+                       hygiene: 100,
+                       lastActivityTime: Date.now(),
+                       isAlive: true,
+                       currentClothing: null
+                   });
+                   saveCatStateToFirestore(); // Salva o estado resetado no Firestore
+                   showMessage("O gato foi resetado com sucesso!");
+                   showView('game'); // Volta para a tela principal
+                   // Se o gato foi resetado e o nome está vazio, o modal de nome aparecerá na próxima carga.
+                   // Para forçar a aparecer imediatamente se o jogo não for recarregado:
+                   if (cat.name === "") { showNameInputModal(); }
+               } else {
+                   showMessage("Reset cancelado.");
+               }
+               updateUI(); // Garante que a UI reflita o estado resetado
+           });
+       });
+
+
+       // Funções para Drag and Drop (agora usando eventos de toque para compatibilidade móvel)
+
+       // Manipulador para o início do toque em um item de roupa
+       function handleTouchStart(event) {
+           // Verifica se é um único toque
+           if (event.touches.length === 1) {
+               const touch = event.touches[0];
+               activeClothingItem = event.target; // Define o item que está sendo arrastado
+
+               // Calcula o offset inicial do toque em relação ao item
+               const rect = activeClothingItem.getBoundingClientRect();
+               initialX = touch.clientX - rect.left;
+               initialY = touch.clientY - rect.top;
+
+               // Define a posição do item como absoluta para permitir o arrasto livre
+               activeClothingItem.style.position = 'absolute';
+               activeClothingItem.style.left = rect.left + 'px';
+               activeClothingItem.style.top = rect.top + 'px';
+               activeClothingItem.classList.add('dragging'); // Adiciona classe para feedback visual
+
+               // Previne o comportamento padrão do navegador (como rolagem)
+               event.preventDefault();
+           }
+       }
+
+       // Manipulador para o movimento do toque
+       function handleTouchMove(event) {
+           if (activeClothingItem) {
+               event.preventDefault(); // Previne rolagem enquanto arrasta
+               const touch = event.touches[0];
+
+               // Calcula a nova posição do item
+               const newX = touch.clientX - initialX;
+               const newY = touch.clientY - initialY;
+
+               activeClothingItem.style.left = newX + 'px';
+               activeClothingItem.style.top = newY + 'px';
+
+               // Fornece feedback visual quando o item arrastado está sobre a imagem do gato
+               const wardrobeCatImageRect = wardrobeCatImage.getBoundingClientRect();
+               if (isOverlapping(activeClothingItem.getBoundingClientRect(), wardrobeCatImageRect)) {
+                   wardrobeCatImage.classList.add('drag-over');
+               } else {
+                   wardrobeCatImage.classList.remove('drag-over');
+               }
+           }
+       }
+
+       // Manipulador para o fim do toque
+       function handleTouchEnd(event) {
+           if (activeClothingItem) {
+               wardrobeCatImage.classList.remove('drag-over'); // Remove o feedback visual
+
+               const wardrobeCatImageRect = wardrobeCatImage.getBoundingClientRect();
+               const draggedItemRect = activeClothingItem.getBoundingClientRect();
+
+               // Verifica se o item foi solto sobre a imagem do gato
+               if (isOverlapping(draggedItemRect, wardrobeCatImageRect)) {
+                   const clothingId = activeClothingItem.id;
+                   cat.currentClothing = clothingId === 'no-clothing' ? null : clothingId;
+                   showMessage(`Gato agora usando: ${clothingNames[cat.currentClothing] || 'Nenhuma Roupa'}!`);
+                   saveCatStateToFirestore(); // Salva a mudança de roupa no Firestore
+                   updateUI(); // Atualiza a UI para refletir a nova roupa
+               }
+
+               // Reseta a posição e os estilos do item arrastado
+               activeClothingItem.style.position = ''; // Remove o posicionamento absoluto
+               activeClothingItem.style.left = '';
+               activeClothingItem.style.top = '';
+               activeClothingItem.classList.remove('dragging'); // Remove a classe de feedback
+               activeClothingItem = null; // Limpa o item ativo
+           }
+       }
+
+       // Função auxiliar para verificar se dois retângulos se sobrepõem
+       function isOverlapping(rect1, rect2) {
+           return !(rect1.right < rect2.left ||
+                    rect1.left > rect2.right ||
+                    rect1.bottom < rect2.top ||
+                    rect1.top > rect2.bottom);
+       }
+
+       // Adiciona os event listeners de toque a todos os itens de roupa
+       document.querySelectorAll('.clothing-item').forEach(item => {
+           item.addEventListener('touchstart', handleTouchStart);
+           // Para desktop, ainda podemos usar os eventos de arrastar padrão para uma melhor experiência
+           item.setAttribute('draggable', 'true');
+           item.addEventListener('dragstart', (e) => {
+               e.dataTransfer.setData("text/plain", e.target.id);
+           });
+       });
+
+       // Adiciona os event listeners de toque globais para arrastar e soltar
+       document.addEventListener('touchmove', handleTouchMove, { passive: false }); // `passive: false` para permitir `preventDefault`
+       document.addEventListener('touchend', handleTouchEnd);
+
+       // Adiciona os event listeners de arrastar e soltar para desktop na imagem do gato
+       wardrobeCatImage.addEventListener('dragover', (e) => {
+           e.preventDefault(); // Necessário para permitir o drop
+           wardrobeCatImage.classList.add('drag-over');
+       });
+       wardrobeCatImage.addEventListener('dragleave', (e) => {
+           wardrobeCatImage.classList.remove('drag-over');
+       });
+       wardrobeCatImage.addEventListener('drop', (e) => {
+           e.preventDefault();
+           wardrobeCatImage.classList.remove('drag-over');
+           const clothingId = e.dataTransfer.getData("text/plain");
+           cat.currentClothing = clothingId === 'no-clothing' ? null : clothingId;
+           showMessage(`Gato agora usando: ${clothingNames[cat.currentClothing] || 'Nenhuma Roupa'}!`);
+           saveCatStateToFirestore();
+           updateUI();
+       });
+
+
+       // Loop principal do jogo: diminui os status ao longo do tempo (online)
+       function gameLoop() {
+           if (!cat.isAlive) { // Se o gato não estiver vivo, não executa o loop
+               clearInterval(gameInterval);
+               return;
+           }
+
+           cat.hunger -= ONLINE_DECAY_HUNGER;
+           cat.energy -= ONLINE_DECAY_ENERGY;
+           cat.happiness -= ONLINE_DECAY_HAPPINESS;
+           cat.hygiene -= ONLINE_DECAY_HYGIENE;
+
+           // Verifica se algum status chegou a zero enquanto online para evitar mortes inesperadas durante o jogo ativo
+           if (cat.hunger <= 0 || cat.energy <= 0 || cat.happiness <= 0 || cat.hygiene <= 0) {
+               // Se algum status atingir 0 online, o gato fica "muito mal", mas não morre instantaneamente
+               // Ele só morre se passar do DEATH_THRESHOLD_HOURS offline
+               console.log("Gato atingiu status crítico online, mas não morreu.");
+           }
+
+           updateUI(); // Atualiza a interface imediatamente após o decremento local
+           saveCatStateToFirestore(); // Salva as mudanças no Firestore
+       }
+
+       let gameInterval; // Para armazenar o ID do intervalo do jogo
+
+       // Função para calcular a degradação offline
+       function applyOfflineDecay(lastActivityTime) {
+           const currentTime = Date.now();
+           const timeElapsedMs = currentTime - lastActivityTime;
+           const timeElapsedHours = timeElapsedMs / (1000 * 60 * 60); // Converte milissegundos para horas
+
+           console.log(`Tempo offline: ${timeElapsedHours.toFixed(2)} horas`);
+
+           if (timeElapsedHours > 0) {
+               cat.hunger -= timeElapsedHours * OFFLINE_DECAY_PER_HOUR_HUNGER;
+               cat.energy -= timeElapsedHours * OFFLINE_DECAY_PER_HOUR_ENERGY;
+               cat.happiness -= timeElapsedHours * OFFLINE_DECAY_PER_HOUR_HAPPINESS;
+               cat.hygiene -= timeElapsedHours * OFFLINE_DECAY_PER_HOUR_HYGIENE;
+
+               // Verifica a condição de morte
+               if (timeElapsedHours >= DEATH_THRESHOLD_HOURS) {
+                   // O gato morre se qualquer um dos status estiver em 0 ou abaixo
+                   if (cat.hunger <= 0 || cat.energy <= 0 || cat.happiness <= 0 || cat.hygiene <= 0) {
+                       cat.isAlive = false;
+                       showMessage("O gato morreu de negligência! :(", 5000);
+                       console.log("Gato morreu devido à negligência offline.");
+                   }
+               }
+           }
+       }
+
+       // Configuração do Firebase (SUBSTITUA COM AS SUAS CREDENCIAIS DO FIREBASE CONSOLE)
+       const firebaseConfig = {
+         apiKey: "AIzaSyAVlGbgDol3_19Fc0gARxi3AZfimWR-r9I",
+         authDomain: "gato-virtual.firebaseapp.com",
+         projectId: "gato-virtual",
+         storageBucket: "gato-virtual.firebasestorage.app",
+         messagingSenderId: "715716729525",
+         appId: "1:715716729525:web:8954d29e4c8dfcbab9bcfc"
+       };
+
+       // Função para inicializar o Firebase e configurar a lógica do jogo
+       async function initFirebaseAndGame() {
+           try {
+               // Verifica se a configuração do Firebase está disponível
+               if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "SUA_API_KEY_AQUI") {
+                   console.error("Configuração do Firebase não encontrada ou incompleta. Por favor, preencha suas credenciais.");
+                   showMessage("Erro: Credenciais do Firebase ausentes. O jogo não pode ser carregado.");
+                   loadingMessage.textContent = "Erro ao carregar. Preencha as credenciais do Firebase.";
+                   return;
+               }
+
+               // Inicializa o aplicativo Firebase
+               app = initializeApp(firebaseConfig);
+               auth = getAuth(app); // Obtém a instância de autenticação
+               db = getFirestore(app); // Obtém a instância do Firestore
+
+               // Autentica o usuário
+               // No GitHub Pages, sempre faremos login anonimamente, pois não há token inicial.
+               await signInAnonymously(auth);
+
+               // Ouve as mudanças no estado de autenticação para obter o ID do usuário
+               onAuthStateChanged(auth, (user) => {
+                   if (user) {
+                       userId = user.uid; // Define o ID do usuário
+                       isAuthReady = true; // Marca a autenticação como pronta
+                       userIdDisplay.textContent = `Seu ID: ${userId}`; // Exibe o ID do usuário
+                       console.log("Usuário autenticado:", userId);
+
+                       // Configura o listener do Firestore para o estado do gato
+                       // O caminho do documento é público para permitir o compartilhamento entre vocês dois
+                       const catRef = doc(db, `artifacts/${firebaseConfig.appId}/public/data/cats/ourSharedCat`);
+                       onSnapshot(catRef, (docSnap) => {
+                           const wasInitialLoad = !initialDataLoaded; // Verifica se é a primeira carga de dados
+                           initialDataLoaded = true; // Marca que os dados iniciais foram carregados
+
+                           if (docSnap.exists()) {
+                               const data = docSnap.data();
+                               // Aplica a degradação offline ANTES de atualizar o estado local
+                               if (data.lastActivityTime && data.isAlive) { // Só calcula se o gato estava vivo antes
+                                   // Cria uma cópia temporária para calcular a degradação offline
+                                   const tempCat = { ...cat };
+                                   Object.assign(tempCat, data); // Atualiza a cópia com os dados do Firestore
+
+                                   // Aplica a degradação offline na cópia
+                                   const initialIsAlive = tempCat.isAlive; // Salva o estado inicial de vivo
+                                   applyOfflineDecay(tempCat.lastActivityTime);
+
+                                   // Se o gato morreu offline, atualiza o estado principal do gato e salva no Firestore
+                                   if (!cat.isAlive && initialIsAlive) {
+                                       saveCatStateToFirestore(); // Salva o estado de morte
+                                   }
+                               }
+                               // Atualiza o objeto 'cat' local com os dados do Firestore (já com a degradação offline aplicada se for o caso)
+                               Object.assign(cat, data);
+                               // Garante que currentClothing seja null se não estiver definido no Firestore
+                               if (cat.currentClothing === undefined) {
+                                   cat.currentClothing = null;
+                               }
+                               // Garante que o nome do gato seja uma string vazia se não estiver definido
+                               if (cat.name === undefined) {
+                                   cat.name = "";
+                               }
+                               console.log("Estado do gato atualizado do Firestore:", cat);
+
+                               // Se for a carga inicial E o gato não tem nome, mostra o modal de input de nome
+                               if (wasInitialLoad && cat.name === "") {
+                                   showNameInputModal();
+                               } else if (wasInitialLoad) {
+                                   // Se for a carga inicial e o gato já tem nome, mostra a tela do jogo
+                                   showView('game');
+                               }
+
+                           } else {
+                               // Se o documento do gato não existir (primeira vez), inicializa um novo gato
+                               console.log("Nenhum dado do gato encontrado, inicializando novo gato.");
+                               Object.assign(cat, { name: "", hunger: 100, energy: 100, happiness: 100, hygiene: 100, lastActivityTime: Date.now(), isAlive: true, currentClothing: null });
+                               saveCatStateToFirestore(); // Salva o estado inicial no Firestore
+                               showNameInputModal(); // Mostra o modal para pedir o nome
+                           }
+                           updateUI(); // Sempre atualiza a interface após as mudanças nos dados
+                           loadingMessage.classList.add('hidden'); // Esconde a mensagem de carregamento
+                           if (!gameInterval && cat.isAlive) { // Inicia o loop do jogo apenas uma vez e se o gato estiver vivo
+                               gameInterval = setInterval(gameLoop, 2000); // Executa a cada 2 segundos
+                           }
+                       }, (error) => {
+                           console.error("Erro ao ouvir o documento do gato:", error);
+                           showMessage("Erro ao carregar o estado do gato em tempo real.");
+                           loadingMessage.textContent = "Erro ao carregar o jogo. Recarregue a página.";
+                       });
+
+                   } else {
+                       console.log("Nenhum usuário logado.");
+                       isAuthReady = false;
+                       userIdDisplay.textContent = `Seu ID: Não autenticado`;
+                       showMessage("Não foi possível autenticar. Recarregue a página.");
+                       loadingMessage.textContent = "Erro de autenticação. Recarregue a página.";
+                   }
+               });
+
+           } catch (e) {
+               console.error("Erro durante a inicialização ou autenticação do Firebase:", e);
+               showMessage("Erro ao iniciar o jogo. Verifique a conexão.");
+               loadingMessage.textContent = "Erro ao iniciar o jogo. Recarregue a página.";
+           }
+       }
+
+       // Chama a função initFirebaseAndGame quando a janela é totalmente carregada
+       window.onload = () => {
+           // A decisão de qual tela mostrar será feita dentro do onSnapshot,
+           // após os dados iniciais serem carregados.
+           initFirebaseAndGame();
+       };
+   </script>
+</body>
+</html>
